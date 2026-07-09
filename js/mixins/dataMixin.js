@@ -1,7 +1,4 @@
-import { DEFAULT_FORMS, FILTER_OPTIONS } from '../constants.js';
-import { today } from '../utils.js';
-
-export const dataMixin = {
+window.dataMixin = {
     data() {
         return {
             store: {
@@ -13,13 +10,13 @@ export const dataMixin = {
                 activeFilter: 'all',
                 showRangeDialog: false,
                 showAddDialog: false,
-                customRange: { start: today(), end: today() },
-                filterOptions: FILTER_OPTIONS,
+                customRange: { start: window.today(), end: window.today() },
+                filterOptions: window.FILTER_OPTIONS,
                 lists: { pelanggan: [], penjualan: [], kas: [], produksi: [] },
                 cart: [],
                 lazyLimit: 10,
                 toast: { show: false, message: '' },
-                forms: _.cloneDeep(DEFAULT_FORMS)
+                forms: _.cloneDeep(window.DEFAULT_FORMS)
             }
         };
     },
