@@ -1,7 +1,3 @@
-// ================================================================
-// KONFIGURASI (dibekukan)
-// ================================================================
-
 const CONFIG = Object.freeze({
   WHATSAPP_NUMBER: '6285963172893',
   PAGE_SIZE: 10,
@@ -31,7 +27,7 @@ const FILTER_OPTIONS = Object.freeze([
   { label: 'Kemarin', value: 'yesterday' },
   { label: 'Minggu Ini', value: 'thisWeek' },
   { label: 'Minggu Lalu', value: 'lastWeek' },
-  { label: 'Rentang 📅', value: 'range' }
+  { label: 'Rentang ', value: 'range' }
 ]);
 
 const DEFAULT_FORMS = Object.freeze({
