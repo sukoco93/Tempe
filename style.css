@@ -15,7 +15,7 @@ html,body,#app{height:100vh;height:100dvh;overflow:hidden;font-family:'Inter',-a
 @media (prefers-reduced-motion: reduce){*{animation-duration:0.01ms!important;animation-iteration-count:1!important;transition-duration:0.01ms!important}.glass,.app-bar,.bottom-nav,.list-item,.summary-card,.top-sheet,.bottom-sheet{backdrop-filter:none!important;-webkit-backdrop-filter:none!important;background:rgba(255,255,255,.85)!important}}
 .list-item{will-change:transform}
 
-/* ===== SPLASH SCREEN ===== */
+/* ===== SPLASH ===== */
 #splash{position:fixed;top:0;left:0;width:100vw;height:100vh;height:100dvh;display:flex;flex-direction:column;align-items:center;justify-content:center;background:linear-gradient(145deg,#00796b,#004d40);z-index:9999;transition:opacity 0.8s ease,transform 0.8s ease;font-family:'Inter',sans-serif;color:#fff}
 #splash .logo{width:120px;height:120px;border-radius:32px;background:rgba(255,255,255,.15);backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);display:flex;align-items:center;justify-content:center;font-size:64px;font-weight:800;letter-spacing:-2px;box-shadow:0 20px 60px rgba(0,0,0,.3);animation:splashPulse 1.8s ease-in-out infinite;margin-bottom:28px;user-select:none}
 #splash .logo i{font-size:64px;color:#fff;text-shadow:0 4px 12px rgba(0,0,0,.2)}
@@ -87,7 +87,7 @@ html,body,#app{height:100vh;height:100dvh;overflow:hidden;font-family:'Inter',-a
 .bottom-nav .nav-btn i{font-size:22px;transition:.25s}
 .bottom-nav .nav-btn.active{color:#00796b}
 .bottom-nav .nav-btn.active i{transform:translateY(-2px) scale(1.05);text-shadow:0 4px 12px rgba(0,121,107,.2)}
-.bottom-nav .nav-btn.add-btn{background:linear-gradient(145deg,#00796b,#004d40);width:58px;height:58px;border-radius:40px;color:#fff;margin-top:-20px;box-shadow:0 8px 24px rgba(0,121,107,.35);transition:.25s;animation:float 3s ease-in-out infinite}
+.bottom-nav .nav-btn.add-btn{background:linear-gradient(145deg,#00796b,#004d40);width:58px;height:58px;border-radius:40px;color:#fff;margin-top:-20px;box-shadow:0 8px 24px rgba(0,121,107,.35);transition:.25s;animation:float 3s ease-in-out infinite;flex:0 0 auto;margin-left:auto;margin-right:auto}
 .bottom-nav .nav-btn.add-btn i{font-size:28px}
 .bottom-nav .nav-btn.add-btn:active{transform:scale(.92)}
 
@@ -138,10 +138,8 @@ html,body,#app{height:100vh;height:100dvh;overflow:hidden;font-family:'Inter',-a
 .load-more-btn:active{transform:scale(.97)}
 .load-more-btn:disabled{opacity:.5}
 
-/* ===== VIRTUAL SCROLLER ===== */
 .scroller{height:calc(100vh - 320px);width:100%;overflow-y:auto}
 .scroller .list-item{animation:none!important;transform:none!important}
 @media(max-width:420px){.scroller{height:calc(100vh - 280px)}}
 
-/* ===== RESPONSIVE ===== */
 @media(max-width:420px){.app-bar{padding:0 12px;height:64px}.main-scroll{padding-top:76px;padding-bottom:76px;padding-left:12px;padding-right:12px}.list-item{padding:14px}.summary-card .item .value{font-size:16px}.bottom-nav{height:64px}.bottom-nav .nav-btn.add-btn{width:50px;height:50px}.bottom-nav .nav-btn.add-btn i{font-size:24px}.settings-grid{grid-template-columns:1fr}}
