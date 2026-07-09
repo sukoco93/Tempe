@@ -1,6 +1,4 @@
-import { WHATSAPP_TARGET } from '../constants.js';
-
-export const uiMixin = {
+window.uiMixin = {
     methods: {
         getPelangganName(id) {
             const found = _.find(this.store.lists.pelanggan, { id });
@@ -10,9 +8,7 @@ export const uiMixin = {
             if (item.isAutomated) return `Penjualan - ${this.getPelangganName(item.pelangganId)}`;
             return item.keterangan || '-';
         },
-        resetLazyLoad() {
-            this.store.lazyLimit = 10;
-        },
+        resetLazyLoad() { this.store.lazyLimit = 10; },
         changeTab(tab) {
             this.store.currentMenu = tab;
             this.resetLazyLoad();
@@ -38,7 +34,7 @@ export const uiMixin = {
             const nama = this.getPelangganName(item.pelangganId);
             const lines = item.barang.split(', ').map(i => `  ${i}`).join('\n');
             const msg = "```\n============================\n          INVOICE           \n============================\nTgl      : "+item.tgl+"\nPelanggan: "+nama+"\n----------------------------\nDaftar Barang:\n"+lines+"\n----------------------------\nTOTAL    : Rp "+item.total.toLocaleString()+"\n============================\nTerimakasih\nIda 0856-0627-1720\n```";
-            window.open(`https://api.whatsapp.com/send?phone=${WHATSAPP_TARGET}&text=${encodeURIComponent(msg)}`, '_blank');
+            window.open(`https://api.whatsapp.com/send?phone=${window.WHATSAPP_TARGET}&text=${encodeURIComponent(msg)}`, '_blank');
         }
     }
 };
