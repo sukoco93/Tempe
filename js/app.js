@@ -1,3 +1,4 @@
+console.log('Vue version:', Vue.version);
 import { dataMixin } from './mixins/dataMixin.js';
 import { computedMixin } from './mixins/computedMixin.js';
 import { crudMixin } from './mixins/crudMixin.js';
@@ -15,6 +16,7 @@ new Vue({
         exportImportMixin
     ],
     mounted() {
+        console.log('Vue mounted!');
         this.loadData();
 
         // Registrasi Service Worker
