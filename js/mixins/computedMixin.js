@@ -1,4 +1,4 @@
-export const computedMixin = {
+window.computedMixin = {
     computed: {
         filteredList() {
             const q = this.store.searchQuery.toLowerCase();
