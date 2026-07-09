@@ -1,61 +1,3 @@
-// ==================== constants.js ====================
-const DEFAULT_FORMS = {
-    pelanggan: { nama: '', hp: '' },
-    penjualan: { tgl: dayjs().format('YYYY-MM-DD'), pelangganId: '', barang: 'Tempe', qty: 1, harga: 2500 },
-    kas: { tgl: dayjs().format('YYYY-MM-DD'), jenis: 'masuk', keterangan: '', nominal: '' },
-    produksi: { tgl: dayjs().format('YYYY-MM-DD'), bahan: 'Kedelai', qty_bahan: 1, produk: 'Tempe', qty_produk: 1 }
-};
-
-const FILTER_OPTIONS = [
-    { label: 'Semua', value: 'all' },
-    { label: 'Hari Ini', value: 'today' },
-    { label: 'Kemarin', value: 'yesterday' },
-    { label: 'Minggu Ini', value: 'thisWeek' },
-    { label: 'Minggu Lalu', value: 'lastWeek' },
-    { label: 'Rentang 📅', value: 'range' }
-];
-
-const WHATSAPP_TARGET = "6285963172893";
-
-// ==================== utils.js ====================
-function today() { return dayjs().format('YYYY-MM-DD'); }
-function getDateOffset(d) { return dayjs().add(d, 'day').format('YYYY-MM-DD'); }
-
-function validateForm(data, fields) {
-    for (let f of fields) {
-        const v = data[f];
-        if (typeof v === 'string' && v.trim() === '') return { valid: false, field: f };
-        if (typeof v === 'number' && v <= 0) return { valid: false, field: f };
-        if (v === undefined || v === null || v === '') return { valid: false, field: f };
-    }
-    return { valid: true };
-}
-
-function downloadFile(content, name, mime = 'text/csv') {
-    const blob = new Blob([content], { type: mime });
-    const a = document.createElement('a');
-    a.href = URL.createObjectURL(blob);
-    a.download = name;
-    a.click();
-    URL.revokeObjectURL(a.href);
-}
-
-function arrayToCSV(data) {
-    if (!data || !data.length) return '';
-    const headers = Object.keys(data[0]);
-    const rows = data.map(obj => headers.map(k => `"${obj[k]}"`).join(','));
-    return [headers.join(','), ...rows].join('\n');
-}
-
-// ==================== db.js ====================
-const db = new Dexie("TokoAndroidDB_TopSheet_FinalFix");
-db.version(1).stores({
-    pelanggan: '++id, nama, hp',
-    penjualan: '++id, tgl, pelangganId, barang, total',
-    kas: '++id, tgl, jenis, keterangan, nominal, isAutomated, pelangganId',
-    produksi: '++id, tgl, bahan, produk'
-});
-
 // ==================== dataMixin ====================
 const dataMixin = {
     data() {
@@ -362,19 +304,6 @@ const exportImportMixin = {
     }
 };
 
-// ==================== app.js (Vue instance) ====================
-new Vue({
-    el: '#app',
-    mixins: [
-        dataMixin,
-        computedMixin,
-        crudMixin,
-        uiMixin,
-        exportImportMixin
-    ],
-    mounted() {
-        this.loadData();
-
         if ('serviceWorker' in navigator) {
             navigator.serviceWorker.register('/sw.js')
                 .then(reg => console.log('SW registered'))
@@ -382,5 +311,3 @@ new Vue({
         }
     }
 });
-
-console.log('✅ bundle.js selesai dimuat');
