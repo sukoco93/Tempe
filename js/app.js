@@ -4,6 +4,7 @@ import { crudMixin } from './mixins/crudMixin.js';
 import { uiMixin } from './mixins/uiMixin.js';
 import { exportImportMixin } from './mixins/exportImportMixin.js';
 
+// ... import mixins
 new Vue({
     el: '#app',
     mixins: [
@@ -15,5 +16,14 @@ new Vue({
     ],
     mounted() {
         this.loadData();
+
+        // Registrasi Service Worker
+        if ('serviceWorker' in navigator) {
+            navigator.serviceWorker.register('/sw.js')
+                .then(reg => console.log('SW registered'))
+                .catch(err => console.error('SW registration failed', err));
+        }
+    }
+});
     }
 });
