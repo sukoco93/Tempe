@@ -1,0 +1,320 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover" />
+  <title>Tempe Legend</title>
+  <meta name="theme-color" content="#00796b" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <link rel="manifest" href="./manifest.json" />
+  <link rel="apple-touch-icon" href="icon/icon-180.png" />
+
+  <!-- Google Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:opsz,wght@14..32,400;14..32,600;14..32,700;14..32,800&display=swap" rel="stylesheet" id="google-fonts" />
+
+  <!-- Font Awesome -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" id="fa-css" onerror="this.href='https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@6.5.1/css/all.min.css'" />
+
+  <!-- Virtual Scroller CSS (dengan fallback) -->
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/vue-virtual-scroller@1.1.2/dist/vue-virtual-scroller.css" />
+  <link rel="stylesheet" href="https://unpkg.com/vue-virtual-scroller@1.1.2/dist/vue-virtual-scroller.css" onerror="this.disabled=true" />
+
+  <!-- Style Utama -->
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+
+  <!-- ===== SPLASH SCREEN ===== -->
+  <div id="splash">
+    <div class="logo"><i class="fas fa-seedling"></i></div>
+    <div class="brand">Tempe Legend</div>
+    <div class="sub">Manajemen Toko Modern</div>
+    <div class="progress-bar">
+      <div class="fill"></div>
+    </div>
+  </div>
+
+  <!-- ===== APP ===== -->
+  <div id="app" v-cloak>
+    <!-- APP BAR -->
+    <header class="app-bar">
+      <div class="search-wrap">
+        <i class="fas fa-search" aria-hidden="true"></i>
+        <input type="text" v-model="searchQuery" placeholder="Cari data..." @input="onSearchInput" aria-label="Cari data" />
+      </div>
+      <button class="action-btn" @click="exportData" :disabled="loading" aria-label="Ekspor CSV">
+        <i class="fas fa-download" aria-hidden="true"></i>
+      </button>
+      <button class="action-btn" @click="$refs.csvInput.click()" :disabled="loading" aria-label="Impor CSV">
+        <i class="fas fa-upload" aria-hidden="true"></i>
+      </button>
+      <input type="file" ref="csvInput" accept=".csv" @change="importCSV" style="display:none" />
+      <button class="action-btn" @click="showSettings = !showSettings" aria-label="Pengaturan">
+        <i class="fas fa-sliders-h" aria-hidden="true"></i>
+      </button>
+    </header>
+
+    <!-- MAIN SCROLL -->
+    <div class="main-scroll scroll-aman" ref="scrollContainer">
+      <!-- SUMMARY -->
+      <div v-if="menu === 'kas'" class="summary-card">
+        <div class="item"><div class="label">Masuk</div><div class="value positive">Rp{{ summary.masuk.toLocaleString() }}</div></div>
+        <div class="item"><div class="label">Keluar</div><div class="value negative">Rp{{ summary.keluar.toLocaleString() }}</div></div>
+        <div class="item"><div class="label">Sisa</div><div class="value net">Rp{{ summary.netto.toLocaleString() }}</div></div>
+      </div>
+
+      <!-- FILTER -->
+      <div v-if="menu !== 'pelanggan'" class="filter-scroll">
+        <button v-for="opt in FILTER_OPTIONS" :key="opt.value" class="chip" :class="{ active: filter === opt.value }" @click="setFilter(opt.value)">{{ opt.label }}</button>
+      </div>
+
+      <!-- RANGE PICKER -->
+      <div v-if="filter === 'range'" class="range-picker animate-in">
+        <label><i class="fas fa-calendar-alt" aria-hidden="true"></i> Dari <input type="date" v-model="rangeStart" @change="onRangeChange" /></label>
+        <label><i class="fas fa-calendar-alt" aria-hidden="true"></i> Sampai <input type="date" v-model="rangeEnd" @change="onRangeChange" /></label>
+      </div>
+
+      <!-- LIST HEADER -->
+      <div class="list-header">
+        <span class="title">Arsip {{ menu }}</span>
+        <span class="badge">
+          <span v-if="searchLimited">{{ totalItems }} (200 teratas)</span>
+          <span v-else>{{ items.length }} dari {{ totalItems }}</span>
+        </span>
+      </div>
+
+      <!-- SEARCH LIMIT NOTIF -->
+      <div v-if="searchLimited" class="snackbar" style="position:static;transform:none;margin-bottom:12px;background:#fff3cd;color:#856404;border-radius:12px;padding:8px 16px;font-size:13px;justify-content:flex-start;box-shadow:none;">
+        <i class="fas fa-info-circle" aria-hidden="true"></i> Menampilkan 200 hasil teratas. Perhalus kata kunci.
+      </div>
+
+      <!-- ===== LIST DENGAN FALLBACK ===== -->
+      <template v-if="!items.length">
+        <div class="empty-state">
+          <i class="fas fa-inbox" aria-hidden="true"></i>
+          <h3>Belum ada data</h3>
+          <p>Yuk, tambah transaksi baru!</p>
+        </div>
+      </template>
+
+      <template v-else>
+        <!-- Virtual Scroller (jika tersedia) -->
+        <RecycleScroller
+          v-if="useVirtualScroller"
+          class="scroller"
+          :items="items"
+          :item-size="90"
+          key-field="id"
+          v-slot="{ item }"
+        >
+          <div class="list-item" :class="getItemClass(item)" @dblclick="editItem(item)">
+            <div class="info">
+              <template v-if="menu === 'pelanggan'">
+                <div class="main-text">{{ item.nama }}</div>
+                <div class="sub-text"><i class="fas fa-phone-alt" style="margin-right:6px;" aria-hidden="true"></i>{{ item.hp }}</div>
+              </template>
+              <template v-if="menu === 'penjualan'">
+                <div class="top"><span class="date">{{ item.tgl }}</span><span class="tag"> {{ getPelangganName(item.pelangganId) }}</span></div>
+                <div class="main-text"><span v-for="(b, idx) in item.barangList" :key="idx" class="badge-item">{{ b }}</span></div>
+                <div class="total-large">Rp{{ item.total.toLocaleString() }}</div>
+              </template>
+              <template v-if="menu === 'kas'">
+                <div class="top"><span class="date">{{ item.tgl }}</span><span class="tag" :style="item.jenis==='masuk'?'background:#e0f2f1;color:#00695c;':'background:#ffebee;color:#b71c1c;'">{{ item.jenis==='masuk'?'Masuk':'Keluar' }}</span></div>
+                <div class="main-text">{{ item.isAutomated ? 'Penjualan - '+getPelangganName(item.pelangganId) : item.keterangan||'-' }}</div>
+                <div class="sub-text">Rp<span class="highlight">{{ item.nominal.toLocaleString() }}</span></div>
+              </template>
+              <template v-if="menu === 'produksi'">
+                <div class="top"><span class="date">{{ item.tgl }}</span></div>
+                <div class="main-text"><i class="fas fa-seedling" style="color:#2e7d32;margin-right:8px;" aria-hidden="true"></i>{{ item.bahan }} <span style="font-weight:400;font-size:14px;">({{ item.qty_bahan }})</span></div>
+                <div class="sub-text"><i class="fas fa-box" style="color:#00796b;margin-right:8px;" aria-hidden="true"></i>{{ item.produk }} <span style="font-weight:400;">({{ item.qty_produk }} Pcs)</span></div>
+              </template>
+            </div>
+            <div class="item-actions">
+              <button class="edit-btn" @click.stop="editItem(item)" :disabled="loading" aria-label="Edit data">
+                <i class="fas fa-pen" aria-hidden="true"></i>
+              </button>
+              <button class="delete-btn" @click.stop="deleteItem(item.id)" :disabled="loading" aria-label="Hapus data">
+                <i class="fas fa-trash-alt" aria-hidden="true"></i>
+              </button>
+            </div>
+          </div>
+        </RecycleScroller>
+
+        <!-- Fallback: v-for biasa (jika virtual scroller tidak tersedia) -->
+        <div v-else class="list-container">
+          <div v-for="item in items" :key="item.id" 
+               class="list-item" 
+               :class="getItemClass(item)"
+               @dblclick="editItem(item)">
+            <div class="info">
+              <!-- konten sama seperti di atas -->
+              <template v-if="menu === 'pelanggan'">
+                <div class="main-text">{{ item.nama }}</div>
+                <div class="sub-text"><i class="fas fa-phone-alt" style="margin-right:6px;" aria-hidden="true"></i>{{ item.hp }}</div>
+              </template>
+              <template v-if="menu === 'penjualan'">
+                <div class="top"><span class="date">{{ item.tgl }}</span><span class="tag"> {{ getPelangganName(item.pelangganId) }}</span></div>
+                <div class="main-text"><span v-for="(b, idx) in item.barangList" :key="idx" class="badge-item">{{ b }}</span></div>
+                <div class="total-large">Rp{{ item.total.toLocaleString() }}</div>
+              </template>
+              <template v-if="menu === 'kas'">
+                <div class="top"><span class="date">{{ item.tgl }}</span><span class="tag" :style="item.jenis==='masuk'?'background:#e0f2f1;color:#00695c;':'background:#ffebee;color:#b71c1c;'">{{ item.jenis==='masuk'?'Masuk':'Keluar' }}</span></div>
+                <div class="main-text">{{ item.isAutomated ? 'Penjualan - '+getPelangganName(item.pelangganId) : item.keterangan||'-' }}</div>
+                <div class="sub-text">Rp<span class="highlight">{{ item.nominal.toLocaleString() }}</span></div>
+              </template>
+              <template v-if="menu === 'produksi'">
+                <div class="top"><span class="date">{{ item.tgl }}</span></div>
+                <div class="main-text"><i class="fas fa-seedling" style="color:#2e7d32;margin-right:8px;" aria-hidden="true"></i>{{ item.bahan }} <span style="font-weight:400;font-size:14px;">({{ item.qty_bahan }})</span></div>
+                <div class="sub-text"><i class="fas fa-box" style="color:#00796b;margin-right:8px;" aria-hidden="true"></i>{{ item.produk }} <span style="font-weight:400;">({{ item.qty_produk }} Pcs)</span></div>
+              </template>
+            </div>
+            <div class="item-actions">
+              <button class="edit-btn" @click.stop="editItem(item)" :disabled="loading" aria-label="Edit data">
+                <i class="fas fa-pen" aria-hidden="true"></i>
+              </button>
+              <button class="delete-btn" @click.stop="deleteItem(item.id)" :disabled="loading" aria-label="Hapus data">
+                <i class="fas fa-trash-alt" aria-hidden="true"></i>
+              </button>
+            </div>
+          </div>
+        </div>
+      </template>
+
+      <!-- LOAD MORE -->
+      <button v-if="items.length < totalItems && !searchLimited && items.length < MAX_VISIBLE_ITEMS" 
+              class="load-more-btn" 
+              @click="loadMore" 
+              :disabled="loading">
+        <i class="fas fa-chevron-down" aria-hidden="true"></i> Muat Lagi ({{ items.length }}/{{ totalItems }})
+      </button>
+
+      <!-- MAX VISIBLE NOTIF -->
+      <div v-if="items.length >= MAX_VISIBLE_ITEMS && totalItems > MAX_VISIBLE_ITEMS" 
+           style="text-align:center;padding:12px;color:#6b7f93;font-weight:500;font-size:13px;background:rgba(255,255,255,.5);border-radius:16px;margin-bottom:12px;">
+        <i class="fas fa-info-circle" aria-hidden="true"></i> Menampilkan maksimal {{ MAX_VISIBLE_ITEMS }} data.
+      </div>
+
+      <div v-if="loading" style="text-align:center;padding:12px 0;color:#8895a7;font-weight:500;font-size:14px;">
+        <i class="fas fa-spinner fa-pulse" aria-hidden="true"></i> Memuat...
+      </div>
+    </div>
+
+    <!-- ===== ADD/EDIT FORM (TOP SHEET) ===== -->
+    <div v-if="showAdd" class="overlay" @click="closeForm" role="presentation"></div>
+    <div v-if="showAdd" class="top-sheet" role="dialog" aria-modal="true" :aria-label="editingId ? 'Edit data' : 'Tambah data'">
+      <div class="sheet-header">
+        <h3><i class="fas fa-plus-circle" style="color:#00796b;margin-right:8px;" aria-hidden="true"></i>{{ editingId ? 'Edit' : 'Tambah' }} {{ menu }}</h3>
+        <button class="close-btn" @click="closeForm" aria-label="Tutup form"><i class="fas fa-times" aria-hidden="true"></i></button>
+      </div>
+      <form @submit.prevent="submitForm">
+        <div v-for="(field, key) in formFields" :key="key" class="form-section">
+          <div class="section-title">{{ key }}</div>
+          <div v-for="(config, name) in field" :key="name" class="field-group">
+            <label :for="'field-'+name">{{ config.label }}</label>
+            <input v-if="config.type !== 'select'" :id="'field-'+name" :type="config.type" v-model="form[key][name]" :placeholder="config.placeholder" :required="config.required" />
+            <select v-else :id="'field-'+name" v-model="form[key][name]" :required="config.required">
+              <option v-for="opt in config.options" :key="opt.value" :value="opt.value">{{ opt.label }}</option>
+            </select>
+          </div>
+        </div>
+
+        <!-- Khusus penjualan: cart (hanya saat tambah, bukan edit) -->
+        <div v-if="menu === 'penjualan' && !editingId" class="form-section">
+          <div class="section-title">Detail Barang</div>
+          <div class="row-2">
+            <div class="field-group"><label>Barang</label><input v-model="cartForm.barang" placeholder="Nama barang" required /></div>
+            <div class="field-group"><label>Qty</label><input v-model.number="cartForm.qty" type="number" min="1" required /></div>
+          </div>
+          <div class="field-group"><label>Harga</label><input v-model.number="cartForm.harga" type="number" min="0" required /></div>
+          <button type="button" class="btn-primary" style="background:linear-gradient(145deg,#00897b,#00695c);margin-bottom:12px;" :disabled="ajaxLoading" @click="addToCart">
+            <i class="fas fa-cart-plus" aria-hidden="true"></i> Masukkan Keranjang ({{ cart.length }}/{{ MAX_CART_ITEMS }})
+          </button>
+          <div class="cart-preview scroll-aman" v-if="cart.length">
+            <div v-for="(c,i) in cart" :key="i" class="cart-item">
+              <span>{{ c.barang }} x{{ c.qty }} <strong>Rp{{ (c.qty*c.harga).toLocaleString() }}</strong></span>
+              <span class="remove" @click="cart.splice(i,1)"><i class="fas fa-minus-circle" aria-hidden="true"></i></span>
+            </div>
+            <div style="text-align:right;font-weight:700;color:#00796b;margin-top:6px;">Subtotal: Rp{{ cartTotal.toLocaleString() }}</div>
+          </div>
+          <div v-if="cart.length >= MAX_CART_ITEMS" style="color:#b91c1c;font-size:13px;font-weight:600;text-align:center;"> Keranjang penuh (maks {{ MAX_CART_ITEMS }} item)</div>
+        </div>
+
+        <button type="submit" class="btn-primary" :disabled="loading || (menu==='penjualan' && !editingId && !cart.length)">
+          <i class="fas fa-save" aria-hidden="true"></i> {{ loading ? 'Menyimpan...' : 'Simpan' }}
+        </button>
+      </form>
+    </div>
+
+    <!-- ===== SETTINGS (BOTTOM SHEET) ===== -->
+    <div v-if="showSettings" class="overlay" @click="showSettings = false" role="presentation"></div>
+    <div v-if="showSettings" class="bottom-sheet" role="dialog" aria-modal="true" aria-label="Pengaturan">
+      <div class="sheet-header">
+        <h3><i class="fas fa-sliders-h" style="color:#00796b;margin-right:8px;" aria-hidden="true"></i>Pengaturan</h3>
+        <button class="close-btn" @click="showSettings = false" aria-label="Tutup pengaturan"><i class="fas fa-times" aria-hidden="true"></i></button>
+      </div>
+      <div class="settings-grid">
+        <div class="setting-item" @click="backupData">
+          <div class="icon-wrap backup"><i class="fas fa-file-export" aria-hidden="true"></i></div>
+          <div class="text"><div class="title">Backup</div><div class="desc">Simpan semua data</div></div>
+          <div class="arrow"><i class="fas fa-chevron-right" aria-hidden="true"></i></div>
+        </div>
+        <div class="setting-item" @click="$refs.jsonInput.click()">
+          <div class="icon-wrap restore"><i class="fas fa-file-import" aria-hidden="true"></i></div>
+          <div class="text"><div class="title">Restore</div><div class="desc">Pulihkan dari file</div></div>
+          <div class="arrow"><i class="fas fa-chevron-right" aria-hidden="true"></i></div>
+        </div>
+        <input type="file" ref="jsonInput" accept=".json" @change="restoreData" style="display:none" />
+      </div>
+    </div>
+
+    <!-- ===== BOTTOM NAV ===== -->
+    <nav class="bottom-nav">
+      <button v-for="tab in MENU_TABS" :key="tab.key" class="nav-btn" :class="{ active: menu === tab.key }" @click="switchMenu(tab.key)" :aria-label="'Buka '+tab.label">
+        <i :class="tab.icon" aria-hidden="true"></i>
+        <span>{{ tab.label }}</span>
+      </button>
+      <button class="nav-btn add-btn" @click="openAddForm" aria-label="Tambah data baru"><i class="fas fa-plus" aria-hidden="true"></i></button>
+    </nav>
+
+    <!-- ===== SNACKBAR ===== -->
+    <div v-if="toast" class="snackbar" role="alert"><i class="fas fa-check-circle" aria-hidden="true"></i> {{ toast }}</div>
+    <!-- ===== OFFLINE INDICATOR ===== -->
+    <div v-if="!online" class="snackbar" style="background:#b91c1c;bottom:150px;white-space:normal;" role="alert">
+      <i class="fas fa-wifi" aria-hidden="true"></i> Anda offline – data disimpan lokal.
+    </div>
+  </div>
+
+  <!-- ===== SCRIPTS ===== -->
+  <script src="https://cdn.jsdelivr.net/npm/dayjs@1/dayjs.min.js" onerror="this.src='https://unpkg.com/dayjs@1/dayjs.min.js'"></script>
+  <script src="https://cdn.jsdelivr.net/npm/lodash@4.17.21/lodash.min.js" onerror="this.src='https://unpkg.com/lodash@4.17.21/lodash.min.js'"></script>
+  <script src="https://cdn.jsdelivr.net/npm/vue@2.7.16/dist/vue.min.js" onerror="this.src='https://unpkg.com/vue@2.7.16/dist/vue.min.js'"></script>
+  <script src="https://cdn.jsdelivr.net/npm/dexie@4.0.8/dist/dexie.min.js" onerror="this.src='https://unpkg.com/dexie@4.0.8/dist/dexie.min.js'"></script>
+  
+  <!-- Virtual Scroller JS (dengan fallback) -->
+  <script src="https://cdn.jsdelivr.net/npm/vue-virtual-scroller@1.1.2/dist/vue-virtual-scroller.umd.min.js" onerror="this.src='https://unpkg.com/vue-virtual-scroller@1.1.2/dist/vue-virtual-scroller.umd.min.js';this.onerror=function(){ console.warn('Virtual scroller gagal dimuat'); }"></script>
+
+<script src="config.js"></script>
+<script src="utils.js"></script>
+<script src="db.js"></script>
+<script src="store.js"></script>
+<script src="computed.js"></script>
+<script src="watch.js"></script>
+<script src="methods.js"></script>
+<script src="lifecycle.js"></script>
+<script src="app.js"></script>
+
+  <!-- Service Worker Registration (toleran error) -->
+  <script>
+    if ('serviceWorker' in navigator) {
+      window.addEventListener('load', () => {
+        navigator.serviceWorker.register('./sw.js')
+          .then(reg => console.log('SW terdaftar'))
+          .catch(err => console.warn('SW tidak tersedia:', err.message));
+      });
+    }
+  </script>
+</body>
+</html>
