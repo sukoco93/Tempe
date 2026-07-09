@@ -9,7 +9,7 @@ import { exportImportMixin } from './mixins/exportImportMixin.js';
 new Vue({
     el: '#app',
     mixins: [
-        dataMixin,
+        //dataMixin,
         //computedMixin,
         //crudMixin,
         //uiMixin,
