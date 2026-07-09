@@ -1,21 +1,17 @@
-// ================================================================
-// COMPUTED PROPERTIES
-// ================================================================
-
 window.AppComputed = {
   pelangganOptions() {
     const list = Object.values(this.pelangganMap);
     return list.map(p => ({ label: p.nama, value: p.id }));
   },
-  formFields() {
-    const fields = Utils.clone(FORM_FIELDS);
-    if (this.menu === 'penjualan' && fields.penjualan) {
-      fields.penjualan.pelangganId.options = this.pelangganOptions;
+  activeFormFields() {
+    const fields = FORM_FIELDS[this.menu] || {};
+    if (this.menu === 'penjualan' && fields.pelangganId) {
+      fields.pelangganId.options = this.pelangganOptions;
     }
     return fields;
   },
   summary() {
-    return this._summary;
+    return this._summary || { masuk: 0, keluar: 0, netto: 0 };
   },
   cartTotal() {
     return _.sumBy(this.cart, i => i.qty * i.harga);
