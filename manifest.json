@@ -2,7 +2,7 @@
   "name": "Tempe Legend",
   "short_name": "TempeLegend",
   "description": "Aplikasi manajemen toko tempe modern",
-  "start_url": "/index.html",
+  "start_url": "./index.html",
   "display": "standalone",
   "orientation": "portrait",
   "background_color": "#f0f4f8",
@@ -21,14 +21,14 @@
       "name": "Tambah Penjualan",
       "short_name": "Jual",
       "description": "Buka form penjualan cepat",
-      "url": "/index.html?action=add&menu=penjualan",
+      "url": "./index.html?action=add&menu=penjualan",
       "icons": [{"src": "icon/icon-256.png", "sizes": "256x256"}]
     },
     {
       "name": "Lihat Kas",
       "short_name": "Kas",
       "description": "Cek saldo kas terkini",
-      "url": "/index.html?menu=kas",
+      "url": "./index.html?menu=kas",
       "icons": [{"src": "icon/icon-256.png", "sizes": "256x256"}]
     }
   ]
