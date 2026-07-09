@@ -18,6 +18,12 @@ const urlsToCache = [
     'https://cdn.jsdelivr.net/npm/lodash@4.17.21/lodash.min.js',
     'https://cdn.jsdelivr.net/npm/vue@2.7.16/dist/vue.min.js',
     'https://unpkg.com/dexie@4.0.8/dist/dexie.js'
+        // ICONS (tambahkan di sini)
+    '/icon/icon-16.png',
+    '/icon/icon-32.png',
+    '/icon/icon-180.png',
+    '/icon/icon-256.png',
+    '/icon/icon-512.png'
 ];
 
 self.addEventListener('install', event => {
