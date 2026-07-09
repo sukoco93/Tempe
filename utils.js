@@ -1,7 +1,3 @@
-// ================================================================
-// UTILITY FUNCTIONS
-// ================================================================
-
 const Utils = {
   today: () => dayjs().format('YYYY-MM-DD'),
   offsetDay: (d) => dayjs().add(d, 'day').format('YYYY-MM-DD'),
