@@ -10,63 +10,26 @@
   "categories": ["business", "productivity", "food"],
   "lang": "id",
   "icons": [
-    {
-      "src": "icon/icon-16.png",
-      "sizes": "16x16",
-      "type": "image/png",
-      "purpose": "any"
-    },
-    {
-      "src": "icon/icon-32.png",
-      "sizes": "32x32",
-      "type": "image/png",
-      "purpose": "any"
-    },
-    {
-      "src": "icon/icon-180.png",
-      "sizes": "180x180",
-      "type": "image/png",
-      "purpose": "any apple-touch-icon"
-    },
-    {
-      "src": "icon/icon-256.png",
-      "sizes": "256x256",
-      "type": "image/png",
-      "purpose": "any maskable"
-    },
-    {
-      "src": "icon/icon-512.png",
-      "sizes": "512x512",
-      "type": "image/png",
-      "purpose": "any maskable"
-    }
+    {"src": "icon/icon-16.png", "sizes": "16x16", "type": "image/png", "purpose": "any"},
+    {"src": "icon/icon-32.png", "sizes": "32x32", "type": "image/png", "purpose": "any"},
+    {"src": "icon/icon-180.png", "sizes": "180x180", "type": "image/png", "purpose": "any apple-touch-icon"},
+    {"src": "icon/icon-256.png", "sizes": "256x256", "type": "image/png", "purpose": "any maskable"},
+    {"src": "icon/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any maskable"}
   ],
-  "screenshots": [],
-  "prefer_related_applications": false,
   "shortcuts": [
     {
       "name": "Tambah Penjualan",
       "short_name": "Jual",
       "description": "Buka form penjualan cepat",
       "url": "/index.html?action=add&menu=penjualan",
-      "icons": [
-        {
-          "src": "icon/icon-256.png",
-          "sizes": "256x256"
-        }
-      ]
+      "icons": [{"src": "icon/icon-256.png", "sizes": "256x256"}]
     },
     {
       "name": "Lihat Kas",
       "short_name": "Kas",
       "description": "Cek saldo kas terkini",
       "url": "/index.html?menu=kas",
-      "icons": [
-        {
-          "src": "icon/icon-256.png",
-          "sizes": "256x256"
-        }
-      ]
+      "icons": [{"src": "icon/icon-256.png", "sizes": "256x256"}]
     }
   ]
 }
