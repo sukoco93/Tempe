@@ -1,13 +1,10 @@
-import { db } from '../db.js';
-import { downloadFile, arrayToCSV } from '../utils.js';
-
-export const exportImportMixin = {
+window.exportImportMixin = {
     methods: {
         handleExport() {
             const data = this.store.lists[this.store.currentMenu];
             if (!data || !data.length) { this.showToast('Tidak ada data'); return; }
-            const csv = arrayToCSV(data);
-            downloadFile(csv, `${this.store.currentMenu}.csv`);
+            const csv = window.arrayToCSV(data);
+            window.downloadFile(csv, `${this.store.currentMenu}.csv`);
             this.showToast('Export berhasil');
         },
         handleImport(e) {
@@ -27,7 +24,7 @@ export const exportImportMixin = {
                         headers.forEach((h, idx) => { if (h !== 'id') obj[h] = isNaN(vals[idx]) ? vals[idx] : Number(vals[idx]); });
                         bulk.push(obj);
                     }
-                    await db[this.store.currentMenu].bulkAdd(bulk);
+                    await window.db[this.store.currentMenu].bulkAdd(bulk);
                     this.showToast('Impor sukses');
                     this.resetLazyLoad();
                     await this.loadData();
@@ -47,7 +44,7 @@ export const exportImportMixin = {
                 kas: this.store.lists.kas,
                 produksi: this.store.lists.produksi
             };
-            downloadFile(JSON.stringify(payload, null, 2), 'Backup.json', 'application/json');
+            window.downloadFile(JSON.stringify(payload, null, 2), 'Backup.json', 'application/json');
             this.showToast('Backup selesai');
             this.store.showSettings = false;
         },
@@ -60,9 +57,9 @@ export const exportImportMixin = {
                     this.store.isLoading = true;
                     const data = JSON.parse(ev.target.result);
                     for (const s in data) {
-                        if (db[s]) {
-                            await db[s].clear();
-                            for (const item of data[s]) { delete item.id; await db[s].add(item); }
+                        if (window.db[s]) {
+                            await window.db[s].clear();
+                            for (const item of data[s]) { delete item.id; await window.db[s].add(item); }
                         }
                     }
                     this.showToast('Restore sukses');
