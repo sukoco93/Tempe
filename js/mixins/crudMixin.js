@@ -1,16 +1,12 @@
-import { db } from '../db.js';
-import { validateForm, today } from '../utils.js';
-import { DEFAULT_FORMS } from '../constants.js';
-
-export const crudMixin = {
+window.crudMixin = {
     methods: {
         async loadData() {
             try {
                 this.store.isLoading = true;
-                this.store.lists.pelanggan = await db.pelanggan.toArray();
-                this.store.lists.penjualan = await db.penjualan.toArray();
-                this.store.lists.kas = await db.kas.toArray();
-                this.store.lists.produksi = await db.produksi.toArray();
+                this.store.lists.pelanggan = await window.db.pelanggan.toArray();
+                this.store.lists.penjualan = await window.db.penjualan.toArray();
+                this.store.lists.kas = await window.db.kas.toArray();
+                this.store.lists.produksi = await window.db.produksi.toArray();
             } catch (e) {
                 console.error(e);
                 this.showToast('Gagal muat data');
@@ -18,23 +14,22 @@ export const crudMixin = {
                 this.store.isLoading = false;
             }
         },
-
         async deleteData(id) {
             if (this.store.isLoading || !confirm('Hapus data ini?')) return;
             this.store.isLoading = true;
             const m = this.store.currentMenu;
             try {
-                const tables = [db[m]];
-                if (m === 'penjualan') tables.push(db.kas);
-                await db.transaction('rw', tables, async () => {
+                const tables = [window.db[m]];
+                if (m === 'penjualan') tables.push(window.db.kas);
+                await window.db.transaction('rw', tables, async () => {
                     if (m === 'penjualan') {
-                        const p = await db.penjualan.get(id);
+                        const p = await window.db.penjualan.get(id);
                         if (p) {
-                            const k = await db.kas.where({ tgl: p.tgl, nominal: p.total, isAutomated: true }).first();
-                            if (k) await db.kas.delete(k.id);
+                            const k = await window.db.kas.where({ tgl: p.tgl, nominal: p.total, isAutomated: true }).first();
+                            if (k) await window.db.kas.delete(k.id);
                         }
                     }
-                    await db[m].delete(id);
+                    await window.db[m].delete(id);
                 });
                 this.showToast('Terhapus');
                 await this.loadData();
@@ -45,7 +40,6 @@ export const crudMixin = {
                 this.store.isLoading = false;
             }
         },
-
         async submitForm() {
             if (this.store.isLoading) return;
             const m = this.store.currentMenu;
@@ -58,32 +52,32 @@ export const crudMixin = {
                 if (!this.store.cart.length) { this.showToast('Keranjang kosong'); return; }
                 required = ['tgl','pelangganId'];
             }
-            const val = validateForm(data, required);
+            const val = window.validateForm(data, required);
             if (!val.valid) { this.showToast(`"${val.field}" wajib diisi`); return; }
 
             this.store.isLoading = true;
             try {
-                const tables = [db[m]];
-                if (m === 'penjualan') tables.push(db.kas);
-                await db.transaction('rw', tables, async () => {
+                const tables = [window.db[m]];
+                if (m === 'penjualan') tables.push(window.db.kas);
+                await window.db.transaction('rw', tables, async () => {
                     if (m === 'penjualan') {
                         const rincian = this.store.cart.map(i => `${i.barang} (${i.qty}xRp${i.harga.toLocaleString()})`).join(', ');
                         const total = this.cartTotal;
-                        await db.penjualan.add({ tgl: data.tgl, pelangganId: data.pelangganId, barang: rincian, total });
-                        await db.kas.add({
+                        await window.db.penjualan.add({ tgl: data.tgl, pelangganId: data.pelangganId, barang: rincian, total });
+                        await window.db.kas.add({
                             tgl: data.tgl, jenis: 'masuk',
                             keterangan: `Penjualan: ${rincian}`,
                             nominal: total, isAutomated: true, pelangganId: data.pelangganId
                         });
                         this.store.cart = [];
-                        this.store.forms.penjualan = _.cloneDeep(DEFAULT_FORMS.penjualan);
+                        this.store.forms.penjualan = _.cloneDeep(window.DEFAULT_FORMS.penjualan);
                     } else {
-                        await db[m].add(data);
+                        await window.db[m].add(data);
                     }
                 });
                 this.showToast('Tersimpan!');
                 this.store.showAddDialog = false;
-                this.store.forms[m] = _.cloneDeep(DEFAULT_FORMS[m]);
+                this.store.forms[m] = _.cloneDeep(window.DEFAULT_FORMS[m]);
                 this.resetLazyLoad();
                 await this.loadData();
             } catch (e) {
@@ -93,7 +87,6 @@ export const crudMixin = {
                 this.store.isLoading = false;
             }
         },
-
         async dispatchAddToCart() {
             const f = this.store.forms.penjualan;
             if (!f.barang.trim() || !f.harga) { this.showToast('Isi barang & harga'); return; }
