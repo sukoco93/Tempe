@@ -1,7 +1,3 @@
-// ================================================================
-// STORE (Vue.observable) & GLOBAL ERROR HANDLER
-// ================================================================
-
 const db = new Database();
 
 const storeState = Vue.observable({
