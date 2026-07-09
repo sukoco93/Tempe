@@ -10,24 +10,20 @@
   <link rel="manifest" href="./manifest.json" />
   <link rel="apple-touch-icon" href="icon/icon-180.png" />
 
-  <!-- Google Fonts -->
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Inter:opsz,wght@14..32,400;14..32,600;14..32,700;14..32,800&display=swap" rel="stylesheet" id="google-fonts" />
 
-  <!-- Font Awesome -->
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" id="fa-css" onerror="this.href='https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@6.5.1/css/all.min.css'" />
 
-  <!-- Virtual Scroller CSS (dengan fallback) -->
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/vue-virtual-scroller@1.1.2/dist/vue-virtual-scroller.css" />
   <link rel="stylesheet" href="https://unpkg.com/vue-virtual-scroller@1.1.2/dist/vue-virtual-scroller.css" onerror="this.disabled=true" />
 
-  <!-- Style Utama -->
   <link rel="stylesheet" href="style.css" />
 </head>
 <body>
 
-  <!-- ===== SPLASH SCREEN ===== -->
+  <!-- SPLASH SCREEN -->
   <div id="splash">
     <div class="logo"><i class="fas fa-seedling"></i></div>
     <div class="brand">Tempe Legend</div>
@@ -37,7 +33,7 @@
     </div>
   </div>
 
-  <!-- ===== APP ===== -->
+  <!-- APP -->
   <div id="app" v-cloak>
     <!-- APP BAR -->
     <header class="app-bar">
@@ -59,8 +55,8 @@
 
     <!-- MAIN SCROLL -->
     <div class="main-scroll scroll-aman" ref="scrollContainer">
-      <!-- SUMMARY -->
-      <div v-if="menu === 'kas'" class="summary-card">
+      <!-- SUMMARY (dengan guard) -->
+      <div v-if="menu === 'kas' && summary" class="summary-card">
         <div class="item"><div class="label">Masuk</div><div class="value positive">Rp{{ summary.masuk.toLocaleString() }}</div></div>
         <div class="item"><div class="label">Keluar</div><div class="value negative">Rp{{ summary.keluar.toLocaleString() }}</div></div>
         <div class="item"><div class="label">Sisa</div><div class="value net">Rp{{ summary.netto.toLocaleString() }}</div></div>
@@ -91,7 +87,7 @@
         <i class="fas fa-info-circle" aria-hidden="true"></i> Menampilkan 200 hasil teratas. Perhalus kata kunci.
       </div>
 
-      <!-- ===== LIST DENGAN FALLBACK ===== -->
+      <!-- LIST -->
       <template v-if="!items.length">
         <div class="empty-state">
           <i class="fas fa-inbox" aria-hidden="true"></i>
@@ -101,7 +97,7 @@
       </template>
 
       <template v-else>
-        <!-- Virtual Scroller (jika tersedia) -->
+        <!-- Virtual Scroller -->
         <RecycleScroller
           v-if="useVirtualScroller"
           class="scroller"
@@ -110,7 +106,7 @@
           key-field="id"
           v-slot="{ item }"
         >
-          <div class="list-item" :class="getItemClass(item)" @dblclick="editItem(item)">
+          <div class="list-item" :class="getItemClass(item)" @dblclick="sendWhatsApp(item)">
             <div class="info">
               <template v-if="menu === 'pelanggan'">
                 <div class="main-text">{{ item.nama }}</div>
@@ -143,14 +139,14 @@
           </div>
         </RecycleScroller>
 
-        <!-- Fallback: v-for biasa (jika virtual scroller tidak tersedia) -->
+        <!-- Fallback v-for biasa -->
         <div v-else class="list-container">
           <div v-for="item in items" :key="item.id" 
                class="list-item" 
                :class="getItemClass(item)"
-               @dblclick="editItem(item)">
+               @dblclick="sendWhatsApp(item)">
             <div class="info">
-              <!-- konten sama seperti di atas -->
+              <!-- konten sama -->
               <template v-if="menu === 'pelanggan'">
                 <div class="main-text">{{ item.nama }}</div>
                 <div class="sub-text"><i class="fas fa-phone-alt" style="margin-right:6px;" aria-hidden="true"></i>{{ item.hp }}</div>
@@ -202,7 +198,7 @@
       </div>
     </div>
 
-    <!-- ===== ADD/EDIT FORM (TOP SHEET) ===== -->
+    <!-- ===== FORM ===== -->
     <div v-if="showAdd" class="overlay" @click="closeForm" role="presentation"></div>
     <div v-if="showAdd" class="top-sheet" role="dialog" aria-modal="true" :aria-label="editingId ? 'Edit data' : 'Tambah data'">
       <div class="sheet-header">
@@ -210,18 +206,16 @@
         <button class="close-btn" @click="closeForm" aria-label="Tutup form"><i class="fas fa-times" aria-hidden="true"></i></button>
       </div>
       <form @submit.prevent="submitForm">
-        <div v-for="(field, key) in formFields" :key="key" class="form-section">
-          <div class="section-title">{{ key }}</div>
-          <div v-for="(config, name) in field" :key="name" class="field-group">
-            <label :for="'field-'+name">{{ config.label }}</label>
-            <input v-if="config.type !== 'select'" :id="'field-'+name" :type="config.type" v-model="form[key][name]" :placeholder="config.placeholder" :required="config.required" />
-            <select v-else :id="'field-'+name" v-model="form[key][name]" :required="config.required">
-              <option v-for="opt in config.options" :key="opt.value" :value="opt.value">{{ opt.label }}</option>
-            </select>
-          </div>
+        <!-- Field untuk menu aktif -->
+        <div v-for="(config, name) in activeFormFields" :key="name" class="field-group">
+          <label :for="'field-'+name">{{ config.label }}</label>
+          <input v-if="config.type !== 'select'" :id="'field-'+name" :type="config.type" v-model="form[menu][name]" :placeholder="config.placeholder" :required="config.required" />
+          <select v-else :id="'field-'+name" v-model="form[menu][name]" :required="config.required">
+            <option v-for="opt in config.options" :key="opt.value" :value="opt.value">{{ opt.label }}</option>
+          </select>
         </div>
 
-        <!-- Khusus penjualan: cart (hanya saat tambah, bukan edit) -->
+        <!-- Cart (khusus penjualan, hanya tambah) -->
         <div v-if="menu === 'penjualan' && !editingId" class="form-section">
           <div class="section-title">Detail Barang</div>
           <div class="row-2">
@@ -248,7 +242,7 @@
       </form>
     </div>
 
-    <!-- ===== SETTINGS (BOTTOM SHEET) ===== -->
+    <!-- ===== SETTINGS ===== -->
     <div v-if="showSettings" class="overlay" @click="showSettings = false" role="presentation"></div>
     <div v-if="showSettings" class="bottom-sheet" role="dialog" aria-modal="true" aria-label="Pengaturan">
       <div class="sheet-header">
@@ -281,9 +275,8 @@
 
     <!-- ===== SNACKBAR ===== -->
     <div v-if="toast" class="snackbar" role="alert"><i class="fas fa-check-circle" aria-hidden="true"></i> {{ toast }}</div>
-    <!-- ===== OFFLINE INDICATOR ===== -->
     <div v-if="!online" class="snackbar" style="background:#b91c1c;bottom:150px;white-space:normal;" role="alert">
-      <i class="fas fa-wifi" aria-hidden="true"></i> Anda offline – data disimpan lokal.
+      <i class="fas fa-wifi" aria-hidden="true"></i> Anda offline ï¿½ data disimpan lokal.
     </div>
   </div>
 
@@ -292,21 +285,18 @@
   <script src="https://cdn.jsdelivr.net/npm/lodash@4.17.21/lodash.min.js" onerror="this.src='https://unpkg.com/lodash@4.17.21/lodash.min.js'"></script>
   <script src="https://cdn.jsdelivr.net/npm/vue@2.7.16/dist/vue.min.js" onerror="this.src='https://unpkg.com/vue@2.7.16/dist/vue.min.js'"></script>
   <script src="https://cdn.jsdelivr.net/npm/dexie@4.0.8/dist/dexie.min.js" onerror="this.src='https://unpkg.com/dexie@4.0.8/dist/dexie.min.js'"></script>
-  
-  <!-- Virtual Scroller JS (dengan fallback) -->
   <script src="https://cdn.jsdelivr.net/npm/vue-virtual-scroller@1.1.2/dist/vue-virtual-scroller.umd.min.js" onerror="this.src='https://unpkg.com/vue-virtual-scroller@1.1.2/dist/vue-virtual-scroller.umd.min.js';this.onerror=function(){ console.warn('Virtual scroller gagal dimuat'); }"></script>
 
-<script src="config.js"></script>
-<script src="utils.js"></script>
-<script src="db.js"></script>
-<script src="store.js"></script>
-<script src="computed.js"></script>
-<script src="watch.js"></script>
-<script src="methods.js"></script>
-<script src="lifecycle.js"></script>
-<script src="app.js"></script>
+  <script src="config.js"></script>
+  <script src="utils.js"></script>
+  <script src="db.js"></script>
+  <script src="store.js"></script>
+  <script src="computed.js"></script>
+  <script src="watch.js"></script>
+  <script src="methods.js"></script>
+  <script src="lifecycle.js"></script>
+  <script src="app.js"></script>
 
-  <!-- Service Worker Registration (toleran error) -->
   <script>
     if ('serviceWorker' in navigator) {
       window.addEventListener('load', () => {
@@ -317,4 +307,4 @@
     }
   </script>
 </body>
-</html>
+	</html>
