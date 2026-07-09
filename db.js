@@ -1,7 +1,3 @@
-// ================================================================
-// DATABASE LAYER
-// ================================================================
-
 class Database {
   constructor() {
     this.db = new Dexie(CONFIG.DB_NAME);
@@ -22,6 +18,22 @@ class Database {
       const table = this.db[menu];
       if (!table) return { items: [], total: 0 };
 
+      // ===== KHUSUS PELANGGAN (tidak pakai tgl) =====
+      if (menu === 'pelanggan') {
+        let items = await table.toArray();
+        if (search) {
+          const q = search.toLowerCase().trim();
+          items = items.filter(item =>
+            item.nama.toLowerCase().includes(q) || item.hp.includes(q)
+          );
+        }
+        items = _.orderBy(items, ['nama'], ['asc']);
+        const total = items.length;
+        items = items.slice(offset, offset + limit);
+        return { items, total };
+      }
+
+      // ===== MENU LAIN (penjualan, kas, produksi) =====
       let collection = table.orderBy('tgl');
       const dateFilter = Utils.getDateFilter(filter, rangeStart, rangeEnd);
       if (dateFilter) {
@@ -37,18 +49,22 @@ class Database {
         const q = search.toLowerCase().trim();
         const pelangganMap = await this.getPelangganMap();
         items = items.filter(item => {
-          if (menu === 'pelanggan') return item.nama.toLowerCase().includes(q) || item.hp.includes(q);
-          if (menu === 'penjualan') return item.barang.toLowerCase().includes(q) || (pelangganMap[item.pelangganId]?.nama || '').toLowerCase().includes(q);
+          if (menu === 'penjualan') {
+            return item.barang.toLowerCase().includes(q) || (pelangganMap[item.pelangganId]?.nama || '').toLowerCase().includes(q);
+          }
           if (menu === 'kas') {
             const ket = item.isAutomated ? 'Penjualan - ' + (pelangganMap[item.pelangganId]?.nama || 'Umum') : (item.keterangan || '');
             return ket.toLowerCase().includes(q);
           }
-          if (menu === 'produksi') return item.bahan.toLowerCase().includes(q) || item.produk.toLowerCase().includes(q);
+          if (menu === 'produksi') {
+            return item.bahan.toLowerCase().includes(q) || item.produk.toLowerCase().includes(q);
+          }
           return true;
         });
         total = items.length;
         if (items.length >= CONFIG.SEARCH_LIMIT) items = items.slice(0, CONFIG.SEARCH_LIMIT);
       }
+
       return { items, total };
     });
   }
@@ -95,4 +111,4 @@ class Database {
       return { masuk, keluar, netto: masuk - keluar };
     });
   }
-}
+    }
