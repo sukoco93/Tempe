@@ -10,10 +10,10 @@ new Vue({
     el: '#app',
     mixins: [
         dataMixin,
-        computedMixin,
-        crudMixin,
-        uiMixin,
-        exportImportMixin
+        //computedMixin,
+        //crudMixin,
+        //uiMixin,
+        //exportImportMixin
     ],
     mounted() {
         console.log('Vue mounted!');
