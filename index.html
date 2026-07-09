@@ -1,0 +1,226 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
+    <title>Tempe Legend</title>
+    <!-- Google Fonts Inter -->
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Inter:opsz,wght@14..32,300;14..32,400;14..32,600;14..32,700;14..32,800&display=swap" rel="stylesheet" />
+    <!-- Font Awesome 6 Free -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" />
+    <!-- Day.js, Lodash, Dexie, Vue -->
+    <script src="https://cdn.jsdelivr.net/npm/dayjs@1/dayjs.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/lodash@4.17.21/lodash.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/vue@2.7.16/dist/vue.min.js"></script>
+    <script src="https://unpkg.com/dexie@4.0.8/dist/dexie.js"></script>
+    <!-- CSS -->
+    <link rel="stylesheet" href="css/style.css" />
+</head>
+<body>
+    <div id="app" v-cloak>
+        <!-- APP BAR -->
+        <header class="app-bar">
+            <div class="search-wrap">
+                <i class="fas fa-search"></i>
+                <input type="text" v-model="store.searchQuery" placeholder="Cari data..." @input="resetLazyLoad" />
+            </div>
+            <button class="action-btn" @click="handleExport" :disabled="store.isLoading"><i class="fas fa-download"></i></button>
+            <button class="action-btn" @click="$refs.csvInput.click()" :disabled="store.isLoading"><i class="fas fa-upload"></i></button>
+            <input type="file" ref="csvInput" accept=".csv" @change="handleImport" style="display:none" />
+            <button class="action-btn" @click="store.showSettings = !store.showSettings"><i class="fas fa-sliders-h"></i></button>
+        </header>
+
+        <!-- MAIN SCROLL -->
+        <div class="main-scroll scroll-aman" @scroll="handleListScroll">
+            <!-- SETTINGS - ELEGANT CARD -->
+            <div v-if="store.showSettings" class="settings-card animate-in">
+                <div class="setting-item" @click="backupJSON">
+                    <div class="icon-wrap backup"><i class="fas fa-file-export"></i></div>
+                    <div class="text">
+                        <div class="title">Backup</div>
+                        <div class="desc">Simpan semua data</div>
+                    </div>
+                    <div class="arrow"><i class="fas fa-chevron-right"></i></div>
+                </div>
+                <div class="setting-item" @click="$refs.jsonInput.click()">
+                    <div class="icon-wrap restore"><i class="fas fa-file-import"></i></div>
+                    <div class="text">
+                        <div class="title">Restore</div>
+                        <div class="desc">Pulihkan dari file</div>
+                    </div>
+                    <div class="arrow"><i class="fas fa-chevron-right"></i></div>
+                </div>
+                <input type="file" ref="jsonInput" accept=".json" @change="restoreJSON" style="display:none" />
+            </div>
+
+            <!-- KAS SUMMARY -->
+            <div v-if="store.currentMenu === 'kas'" class="summary-card">
+                <div class="item"><div class="label">Masuk</div><div class="value positive">Rp{{ kasSummary.masuk.toLocaleString() }}</div></div>
+                <div class="item"><div class="label">Keluar</div><div class="value negative">Rp{{ kasSummary.keluar.toLocaleString() }}</div></div>
+                <div class="item"><div class="label">Sisa</div><div class="value net">Rp{{ kasSummary.netto.toLocaleString() }}</div></div>
+            </div>
+
+            <!-- FILTER -->
+            <div v-if="store.currentMenu !== 'pelanggan'" class="filter-scroll">
+                <button v-for="opt in store.filterOptions" :key="opt.value" class="chip" :class="{ active: store.activeFilter === opt.value }" @click="setFilter(opt.value)">{{ opt.label }}</button>
+            </div>
+
+            <!-- LIST HEADER -->
+            <div class="list-header">
+                <span class="title">Arsip {{ store.currentMenu }}</span>
+                <span class="badge">{{ pipelineResult.data.length }} dari {{ pipelineResult.totalItems }}</span>
+            </div>
+
+            <!-- LIST -->
+            <div v-if="pipelineResult.data.length === 0" style="text-align:center;padding:40px 0;color:#8895a7;font-weight:500;">Tidak ada data</div>
+            <div v-for="item in pipelineResult.data" :key="item.id" class="list-item" @dblclick="sendWhatsApp(item)">
+                <div class="info">
+                    <!-- PELANGGAN -->
+                    <template v-if="store.currentMenu === 'pelanggan'">
+                        <div class="main-text">{{ item.nama }}</div>
+                        <div class="sub-text"><i class="fas fa-phone-alt" style="margin-right:6px;"></i>{{ item.hp }}</div>
+                    </template>
+                    <!-- PENJUALAN -->
+                    <template v-if="store.currentMenu === 'penjualan'">
+                        <div class="top"><span class="date">{{ item.tgl }}</span><span class="tag">👤 {{ getPelangganName(item.pelangganId) }}</span></div>
+                        <div class="main-text text-truncate">{{ item.barang }}</div>
+                        <div class="sub-text">Total <span class="highlight">Rp{{ item.total.toLocaleString() }}</span></div>
+                    </template>
+                    <!-- KAS -->
+                    <template v-if="store.currentMenu === 'kas'">
+                        <div class="top"><span class="date">{{ item.tgl }}</span><span class="tag" :style="item.jenis==='masuk'?'background:#e0f2f1;color:#00695c;':'background:#ffebee;color:#b71c1c;'">{{ item.jenis==='masuk' ? 'Masuk' : 'Keluar' }}</span></div>
+                        <div class="main-text">{{ formatKeteranganKas(item) }}</div>
+                        <div class="sub-text">Rp<span class="highlight">{{ item.nominal.toLocaleString() }}</span></div>
+                    </template>
+                    <!-- PRODUKSI -->
+                    <template v-if="store.currentMenu === 'produksi'">
+                        <div class="top"><span class="date">{{ item.tgl }}</span></div>
+                        <div class="main-text"><i class="fas fa-seedling" style="color:#2e7d32;margin-right:8px;"></i>{{ item.bahan }} <span style="font-weight:400;font-size:14px;">({{ item.qty_bahan }})</span></div>
+                        <div class="sub-text"><i class="fas fa-box" style="color:#00796b;margin-right:8px;"></i>{{ item.produk }} <span style="font-weight:400;">({{ item.qty_produk }} Pcs)</span></div>
+                    </template>
+                </div>
+                <button class="delete-btn" @click.stop="deleteData(item.id)" :disabled="store.isLoading"><i class="fas fa-trash-alt"></i></button>
+            </div>
+
+            <!-- LAZY LOADING INDICATOR -->
+            <div v-if="pipelineResult.data.length < pipelineResult.totalItems" style="text-align:center;padding:12px 0;color:#8895a7;font-weight:500;font-size:14px;">
+                <i class="fas fa-spinner fa-pulse"></i> Menggulung data...
+            </div>
+        </div>
+
+        <!-- TOP SHEET ADD -->
+        <transition name="fade">
+            <div v-if="store.showAddDialog" class="overlay" @click="store.showAddDialog = false"></div>
+        </transition>
+        <transition name="slide">
+            <div v-if="store.showAddDialog" class="top-sheet">
+                <div class="header">
+                    <h3><i class="fas fa-plus-circle" style="color:#00796b;margin-right:8px;"></i>Tambah {{ store.currentMenu }}</h3>
+                    <button class="close-btn" @click="store.showAddDialog = false"><i class="fas fa-times"></i></button>
+                </div>
+                <form @submit.prevent="submitForm">
+                    <!-- PELANGGAN -->
+                    <div v-if="store.currentMenu === 'pelanggan'">
+                        <div class="field-group"><label>Nama Pelanggan</label><input v-model="store.forms.pelanggan.nama" placeholder="Nama lengkap" required /></div>
+                        <div class="field-group"><label>No. WhatsApp</label><input v-model="store.forms.pelanggan.hp" placeholder="0812xxxx" type="tel" required /></div>
+                    </div>
+
+                    <!-- PENJUALAN -->
+                    <div v-if="store.currentMenu === 'penjualan'">
+                        <div class="row-2">
+                            <div class="field-group"><label>Tanggal</label><input v-model="store.forms.penjualan.tgl" type="date" required /></div>
+                            <div class="field-group"><label>Pelanggan</label>
+                                <select v-model="store.forms.penjualan.pelangganId" required>
+                                    <option v-for="p in store.lists.pelanggan" :key="p.id" :value="p.id">{{ p.nama }}</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div class="row-2">
+                            <div class="field-group"><label>Barang</label><input v-model="store.forms.penjualan.barang" placeholder="Nama barang" required /></div>
+                            <div class="field-group"><label>Qty</label><input v-model.number="store.forms.penjualan.qty" type="number" min="1" required /></div>
+                        </div>
+                        <div class="field-group"><label>Harga Satuan</label><input v-model.number="store.forms.penjualan.harga" type="number" min="0" required /></div>
+                        <button type="button" class="btn-primary" style="background:linear-gradient(145deg,#00897b,#00695c);margin-bottom:12px;" :disabled="store.isAjaxLoading" @click="dispatchAddToCart">
+                            <i class="fas fa-cart-plus"></i> Masukkan Keranjang
+                        </button>
+                        <div class="cart-preview scroll-aman" v-if="store.cart.length">
+                            <div v-for="(c, idx) in store.cart" :key="idx" class="cart-item">
+                                <span>{{ c.barang }} x{{ c.qty }} <strong>Rp{{ (c.qty*c.harga).toLocaleString() }}</strong></span>
+                                <span class="remove" @click="store.cart.splice(idx,1)"><i class="fas fa-minus-circle"></i></span>
+                            </div>
+                            <div style="text-align:right;font-weight:700;color:#00796b;margin-top:6px;">Subtotal: Rp{{ cartTotal.toLocaleString() }}</div>
+                        </div>
+                    </div>
+
+                    <!-- KAS -->
+                    <div v-if="store.currentMenu === 'kas'">
+                        <div class="row-2">
+                            <div class="field-group"><label>Tanggal</label><input v-model="store.forms.kas.tgl" type="date" required /></div>
+                            <div class="field-group"><label>Jenis</label>
+                                <select v-model="store.forms.kas.jenis" required>
+                                    <option value="masuk">Masuk (+)</option>
+                                    <option value="keluar">Keluar (-)</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div class="field-group"><label>Keterangan</label><input v-model="store.forms.kas.keterangan" placeholder="Deskripsi" required /></div>
+                        <div class="field-group"><label>Nominal</label><input v-model.number="store.forms.kas.nominal" type="number" min="0" placeholder="Rp" required /></div>
+                    </div>
+
+                    <!-- PRODUKSI -->
+                    <div v-if="store.currentMenu === 'produksi'">
+                        <div class="field-group"><label>Tanggal</label><input v-model="store.forms.produksi.tgl" type="date" required /></div>
+                        <div class="row-2">
+                            <div class="field-group"><label>Bahan Baku</label><input v-model="store.forms.produksi.bahan" placeholder="Kedelai" required /></div>
+                            <div class="field-group"><label>Qty Bahan</label><input v-model.number="store.forms.produksi.qty_bahan" type="number" min="1" required /></div>
+                        </div>
+                        <div class="row-2">
+                            <div class="field-group"><label>Produk Jadi</label><input v-model="store.forms.produksi.produk" placeholder="Tempe" required /></div>
+                            <div class="field-group"><label>Qty Produk</label><input v-model.number="store.forms.produksi.qty_produk" type="number" min="1" required /></div>
+                        </div>
+                    </div>
+
+                    <button type="submit" class="btn-primary" :disabled="store.isLoading || (store.currentMenu==='penjualan' && store.cart.length===0)">
+                        <i class="fas fa-save"></i> Simpan
+                    </button>
+                </form>
+            </div>
+        </transition>
+
+        <!-- BOTTOM NAV -->
+        <nav class="bottom-nav">
+            <button class="nav-btn" :class="{ active: store.currentMenu === 'penjualan' }" @click="changeTab('penjualan')">
+                <i class="fas fa-shopping-cart"></i>
+                <span>Jual</span>
+            </button>
+            <button class="nav-btn" :class="{ active: store.currentMenu === 'kas' }" @click="changeTab('kas')">
+                <i class="fas fa-wallet"></i>
+                <span>Kas</span>
+            </button>
+            <button class="nav-btn add-btn" @click="store.showAddDialog = true">
+                <i class="fas fa-plus"></i>
+            </button>
+            <button class="nav-btn" :class="{ active: store.currentMenu === 'produksi' }" @click="changeTab('produksi')">
+                <i class="fas fa-seedling"></i>
+                <span>Produksi</span>
+            </button>
+            <button class="nav-btn" :class="{ active: store.currentMenu === 'pelanggan' }" @click="changeTab('pelanggan')">
+                <i class="fas fa-users"></i>
+                <span>Pelanggan</span>
+            </button>
+        </nav>
+
+        <!-- SNACKBAR -->
+        <transition name="fade">
+            <div v-if="store.toast.show" class="snackbar">
+                <i class="fas fa-check-circle"></i> {{ store.toast.message }}
+            </div>
+        </transition>
+    </div>
+
+    <!-- JS Modules -->
+    <script type="module" src="js/app.js"></script>
+</body>
+  </html>
