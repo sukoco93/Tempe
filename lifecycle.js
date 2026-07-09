@@ -1,17 +1,11 @@
-// ================================================================
-// LIFECYCLE HOOKS (mounted, beforeDestroy)
-// ================================================================
-
 window.AppLifecycle = {
   mounted() {
     this.resetAndLoad();
 
-    // Fallback timeout untuk splash jika data terlalu lama
     setTimeout(() => {
       this.hideSplash();
     }, 5000);
 
-    // Sinkronisasi antar tab
     const syncHandler = (e) => {
       if (e.key === 'db-updated') {
         this.resetAndLoad();
@@ -20,14 +14,12 @@ window.AppLifecycle = {
     };
     window.addEventListener('storage', syncHandler);
 
-    // Online/offline
     const updateOnline = () => {
       this.online = navigator.onLine;
     };
     window.addEventListener('online', updateOnline);
     window.addEventListener('offline', updateOnline);
 
-    // Simpan ref untuk cleanup
     this._syncHandler = syncHandler;
     this._updateOnline = updateOnline;
   },
