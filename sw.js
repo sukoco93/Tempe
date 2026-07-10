@@ -27,18 +27,25 @@ const ASSETS = [
 
 self.addEventListener('install', event => {
   event.waitUntil(
-    caches.open(CACHE_NAME)
-      .then(cache => cache.addAll(ASSETS))
-      .then(() => self.skipWaiting())
-      .catch(err => console.error('[SW] Gagal cache:', err))
+    (async () => {
+      try {
+        const cache = await caches.open(CACHE_NAME);
+        await cache.addAll(ASSETS);
+        await self.skipWaiting();
+      } catch (err) {
+        console.error('[SW] Gagal cache:', err);
+      }
+    })()
   );
 });
 
 self.addEventListener('activate', event => {
   event.waitUntil(
-    caches.keys().then(keys =>
-      Promise.all(keys.filter(k => k !== CACHE_NAME).map(k => caches.delete(k)))
-    ).then(() => self.clients.claim())
+    (async () => {
+      const keys = await caches.keys();
+      await Promise.all(keys.filter(k => k !== CACHE_NAME).map(k => caches.delete(k)));
+      await self.clients.claim();
+    })()
   );
 });
 
@@ -46,54 +53,76 @@ self.addEventListener('fetch', event => {
   const url = new URL(event.request.url);
   const request = event.request;
 
-  if (url.pathname === '/manifest.json') {
+  // Manifest: selalu coba network dulu, fallback ke cache
+  if (url.pathname.endsWith('/manifest.json')) {
     event.respondWith(
-      fetch(request).then(res => {
-        const cloned = res.clone();
-        caches.open(CACHE_NAME).then(cache => cache.put(request, cloned));
-        return res;
-      }).catch(() => caches.match(request))
+      (async () => {
+        try {
+          const res = await fetch(request);
+          const cache = await caches.open(CACHE_NAME);
+          cache.put(request, res.clone());
+          return res;
+        } catch (err) {
+          const cached = await caches.match(request);
+          return cached || new Response('Not found', { status: 404 });
+        }
+      })()
     );
     return;
   }
 
-  if (request.mode === 'navigate' || url.pathname === './' || url.pathname === './index.html') {
+  // Navigasi halaman (termasuk saat buka PWA / index.html)
+  if (request.mode === 'navigate' || url.pathname === '/' || url.pathname.endsWith('/index.html')) {
     event.respondWith(
-      caches.match(request).then(cached => {
-        const fetchPromise = fetch(request).then(networkRes => {
+      (async () => {
+        try {
+          const networkRes = await fetch(request);
           if (networkRes && networkRes.status === 200) {
-            const cloned = networkRes.clone();
-            caches.open(CACHE_NAME).then(cache => cache.put(request, cloned));
+            const cache = await caches.open(CACHE_NAME);
+            cache.put(request, networkRes.clone());
           }
           return networkRes;
-        }).catch(() => null);
-        return cached || fetchPromise || caches.match(OFFLINE_URL);
-      })
+        } catch (err) {
+          const cached = await caches.match(request);
+          if (cached) return cached;
+          const offline = await caches.match(OFFLINE_URL);
+          if (offline) return offline;
+          return new Response('Offline', { status: 503 });
+        }
+      })()
     );
     return;
   }
 
+  // Aset lain: cache-first, refresh di background
   event.respondWith(
-    caches.match(request).then(cached => {
+    (async () => {
+      const cached = await caches.match(request);
       if (cached) {
-        fetch(request).then(networkRes => {
+        // Refresh cache di background, tidak diblokir
+        fetch(request).then(async networkRes => {
           if (networkRes && networkRes.status === 200) {
-            const cloned = networkRes.clone();
-            caches.open(CACHE_NAME).then(cache => cache.put(request, cloned));
+            const cache = await caches.open(CACHE_NAME);
+            cache.put(request, networkRes.clone());
           }
         }).catch(() => {});
         return cached;
       }
-      return fetch(request).then(res => {
+
+      try {
+        const res = await fetch(request);
         if (res && res.status === 200) {
-          const cloned = res.clone();
-          caches.open(CACHE_NAME).then(cache => cache.put(request, cloned));
+          const cache = await caches.open(CACHE_NAME);
+          cache.put(request, res.clone());
         }
         return res;
-      }).catch(() => {
-        if (request.mode === 'navigate') return caches.match(OFFLINE_URL);
+      } catch (err) {
+        if (request.mode === 'navigate') {
+          const offline = await caches.match(OFFLINE_URL);
+          if (offline) return offline;
+        }
         return new Response('Offline', { status: 503 });
-      });
-    })
+      }
+    })()
   );
 });
