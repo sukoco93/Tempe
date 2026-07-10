@@ -2,6 +2,7 @@
   "name": "Tempe Legend",
   "short_name": "TempeLegend",
   "description": "Aplikasi manajemen toko tempe modern",
+  "scope": "./",
   "start_url": "./index.html",
   "display": "standalone",
   "orientation": "portrait",
