@@ -57,7 +57,7 @@ self.addEventListener('fetch', event => {
     return;
   }
 
-  if (request.mode === 'navigate' || url.pathname === '/' || url.pathname === '/index.html') {
+  if (request.mode === 'navigate' || url.pathname === './' || url.pathname === './index.html') {
     event.respondWith(
       caches.match(request).then(cached => {
         const fetchPromise = fetch(request).then(networkRes => {
